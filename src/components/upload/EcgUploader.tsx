@@ -1,37 +1,18 @@
 "use client";
 
-import { useRef, useState } from "react";
+import * as React from "react";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
-import { loadECGFromFile, type ECGSample } from "@/lib/loadCsv";
 import { Upload } from "lucide-react";
 
 type Props = {
-  onLoaded: (samples: ECGSample[], file: File) => void; // ← kirim File asli
+  onFileSelected: (file: File) => void;
+  disabled?: boolean;
 };
 
-export default function EcgUploader({ onLoaded }: Props) {
-  const inputRef = useRef<HTMLInputElement | null>(null);
-  const [fileName, setFileName] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  async function handleFiles(files: FileList | null) {
-    if (!files || files.length === 0) return;
-    setError(null);
-    const file = files[0];
-    setFileName(file.name);
-    try {
-      const samples = await loadECGFromFile(file);
-      if (samples.length === 0) {
-        setError("Tidak berhasil membaca data ECG dari file ini. Pastikan formatnya benar.");
-        return;
-      }
-      onLoaded(samples, file); // ← kirim file ke parent
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : String(e);
-      setError(`Gagal memuat file: ${msg}`);
-    }
-  }
+export default function EcgUploader({ onFileSelected, disabled }: Props) {
+  const inputRef = React.useRef<HTMLInputElement | null>(null);
+  const [fileName, setFileName] = React.useState<string>("");
 
   return (
     <Card className="rounded-xl">
@@ -40,27 +21,28 @@ export default function EcgUploader({ onLoaded }: Props) {
         <div>
           <h3 className="text-base font-semibold text-foreground">Upload File ECG</h3>
           <p className="text-sm text-muted-foreground">
-            Unggah berkas <b>.csv</b> / <b>.txt</b> berisi sinyal ECG. Format didukung: satu kolom
-            <code> ECG </code>(baris per nilai) atau satu baris <code>ECG</code> berisi angka dipisah
-            tanda hubung (<code>8-7-38-...</code>).
+            Format: <b>.csv</b> satu kolom angka (nilai sinyal). File lain akan ditolak.
           </p>
         </div>
-
+        <input
+          ref={inputRef}
+          type="file"
+          accept=".csv,.txt"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.currentTarget.files?.[0];
+            if (f) {
+              setFileName(f.name);
+              onFileSelected(f);
+            }
+          }}
+        />
         <div className="flex items-center gap-3">
-          <input
-            ref={inputRef}
-            type="file"
-            accept=".csv,.txt"
-            className="hidden"
-            onChange={(e) => handleFiles(e.currentTarget.files)}
-          />
-          <Button onClick={() => inputRef.current?.click()} className="min-w-44">
+          <Button onClick={() => inputRef.current?.click()} disabled={disabled} className="min-w-44">
             Pilih File
           </Button>
-          {fileName ? <span className="text-sm text-muted-foreground">{fileName}</span> : null}
+          {fileName && <span className="text-sm text-muted-foreground">{fileName}</span>}
         </div>
-
-        {error ? <p className="text-sm text-red-600">{error}</p> : null}
       </div>
     </Card>
   );

@@ -1,23 +1,33 @@
-export type SummaryCounts = { L: number; N: number; Q: number; R: number; V: number };
-export type PredictSummary = { total_segments: number; counts: SummaryCounts };
+export const API_BASE =
+  process.env.NEXT_PUBLIC_API_BASE?.replace(/\/+$/, "") || "http://127.0.0.1:5000";
 
-const API_BASE = process.env.NEXT_PUBLIC_AI_API ?? "http://localhost:5000";
-
-/** Kirim file CSV ke backend untuk di-convert NPY → segment → infer → summary */
-export async function predictBatchFromCsv(
-  file: File,
-  sr: number,
-  windowSec: number
-): Promise<PredictSummary> {
-  const fd = new FormData();
-  fd.append("file", file, file.name);
-  fd.append("sr", String(sr));
-  fd.append("window_sec", String(windowSec));
-
-  const res = await fetch(`${API_BASE}/predict-ecg-batch`, { method: "POST", body: fd });
-  if (!res.ok) {
-    const txt = await res.text().catch(() => "");
-    throw new Error(`Gagal prediksi (HTTP ${res.status}) ${txt}`);
+export class ApiError extends Error {
+  status: number;
+  constructor(message: string, status = 500) {
+    super(message);
+    this.status = status;
   }
-  return (await res.json()) as PredictSummary;
+}
+
+/** POST multipart/form-data to /diagnose/ecg */
+export async function postDiagnoseECG(form: FormData) {
+  const res = await fetch(`${API_BASE}/diagnose/ecg`, {
+    method: "POST",
+    body: form,
+  });
+
+  if (!res.ok) {
+    let msg = `Request failed (${res.status})`;
+    try {
+      const j = (await res.json()) as { detail?: unknown };
+      if (j?.detail) msg = typeof j.detail === "string" ? j.detail : JSON.stringify(j.detail);
+    } catch {
+      /* ignore */
+    }
+    throw new ApiError(msg, res.status);
+  }
+  return (await res.json()) as {
+    total_segments: number;
+    counts: Record<"L" | "N" | "Q" | "R" | "V", number>;
+  };
 }

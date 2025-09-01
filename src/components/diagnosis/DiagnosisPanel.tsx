@@ -1,108 +1,84 @@
 "use client";
 
-import { useState } from "react";
-import Card from "@/components/ui/Card";
+import * as React from "react";
 import Button from "@/components/ui/Button";
+import Card from "@/components/ui/Card";
 import Spinner from "@/components/ui/Spinner";
-import type { ECGSample } from "@/lib/loadCsv";
-import { Stethoscope } from "lucide-react";
-import ModelSelect, { type ModelId } from "@/components/diagnosis/ModelSelect";
-import DiagnosisSummary from "@/components/diagnosis/DiagnosisSummary";
-import { segmentECG, classifySegmentDummy, summarize, type ClassLabel } from "@/lib/diagnosiSegments";
-import { predictBatchFromCsv, type PredictSummary } from "@/lib/api";
+import EcgUploader from "@/components/upload/EcgUploader";
+import ModelSelect, { type ModelId } from "./ModelSelect";
+import DiagnosisSummary from "./DiagnosisSummary";
+import { postDiagnoseECG } from "@/lib/api";
+import type { Label } from "@/lib/diagnosis";
 
-type Props = {
-  samples?: ECGSample[];
-  originalFile?: File;   // ← CSV asli untuk dikirim ke backend
-  sr?: number;
-  windowSec?: number;
-};
+export default function DiagnosisPanel() {
+  const [file, setFile] = React.useState<File | null>(null);
+  const [model, setModel] = React.useState<ModelId>("bert");
+  const [isLoading, setIsLoading] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
 
-export default function DiagnosisPanel({ samples, originalFile, sr = 250, windowSec = 0.7 }: Props) {
-  const [running, setRunning] = useState(false);
-  const [model, setModel] = useState<ModelId>("conformer");
-  const [remoteSum, setRemoteSum] = useState<PredictSummary | null>(null);
-  const [localLabels, setLocalLabels] = useState<ClassLabel[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = React.useState<{
+    total_segments: number;
+    counts: Record<Label, number>;
+  } | null>(null);
 
-  async function onDiagnose() {
-    if (!samples?.length) return;
-    setRunning(true);
+  async function handleRun() {
+    if (!file) {
+      setError("Silakan pilih file CSV terlebih dahulu.");
+      return;
+    }
     setError(null);
-    setRemoteSum(null);
-    setLocalLabels(null);
+    setIsLoading(true);
+    setResult(null);
 
     try {
-      if (originalFile) {
-        // Mode backend: CSV → NPY → segment (0.7s) → model → summary
-        const out = await predictBatchFromCsv(originalFile, sr, windowSec);
-        setRemoteSum(out);
-      } else {
-        // Fallback lokal (dummy): segmentasi + klasifikasi dummy → summary
-        const segs = segmentECG(samples, sr, windowSec);
-        const labels = segs.map(s => classifySegmentDummy(s).label);
-        setLocalLabels(labels);
-      }
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : String(e);
+      const form = new FormData();
+      form.append("model_id", model);
+      form.append("file", file, file.name);
+      // opsional: form.append("sr", "250"); form.append("window_sec", "0.7");
+
+      const data = await postDiagnoseECG(form);
+      setResult(data);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Terjadi kesalahan.";
       setError(msg);
     } finally {
-      setRunning(false);
+      setIsLoading(false);
     }
   }
 
-  const disabled = !samples?.length || running;
-
-  const summaryView = (() => {
-    if (remoteSum) return <DiagnosisSummary summary={{
-      totalSegments: remoteSum.total_segments,
-      counts: remoteSum.counts,
-      percentages: {
-        L: +(remoteSum.counts.L * 100 / remoteSum.total_segments).toFixed(1),
-        N: +(remoteSum.counts.N * 100 / remoteSum.total_segments).toFixed(1),
-        Q: +(remoteSum.counts.Q * 100 / remoteSum.total_segments).toFixed(1),
-        R: +(remoteSum.counts.R * 100 / remoteSum.total_segments).toFixed(1),
-        V: +(remoteSum.counts.V * 100 / remoteSum.total_segments).toFixed(1),
-      },
-    }} className="md:col-span-2" />;
-    if (localLabels) return <DiagnosisSummary summary={summarize(localLabels)} className="md:col-span-2" />;
-    return null;
-  })();
-
   return (
-    <Card className="rounded-xl">
-      {!remoteSum && !localLabels ? (
-        <div className="flex flex-col items-center gap-4 text-center">
-          <Stethoscope className="h-8 w-8 text-primary" />
-          <div className="flex flex-col items-center gap-2">
-            <h3 className="text-base font-semibold text-foreground">Diagnosis Kondisi</h3>
-            <p className="text-sm text-muted-foreground">
-              Sistem akan mengubah CSV → NPY, memotong 0,7 detik/segmen, lalu mengklasifikasikan (L, N, Q, R, V).
-            </p>
-            <ModelSelect value={model} onChange={setModel} disabled={running} />
-          </div>
-          <Button onClick={onDiagnose} className="min-w-48" disabled={disabled}>
-            {running ? (<><Spinner className="mr-2" />Memproses…</>) : "Diagnosis"}
-          </Button>
-          {error ? <p className="text-sm text-red-600">{error}</p> : null}
-        </div>
-      ) : (
-        <div className="grid gap-6 md:grid-cols-2">
-          {summaryView}
-          <div className="rounded-xl border border-border/60 bg-card p-5">
-            <h4 className="mb-2 text-base font-semibold text-foreground">Pengaturan</h4>
-            <div className="flex flex-wrap items-center gap-3">
-              <ModelSelect value={model} onChange={setModel} />
-              <Button variant="outline" onClick={() => { setRemoteSum(null); setLocalLabels(null); }}>
-                Diagnosis Ulang
-              </Button>
-            </div>
-            <p className="mt-3 text-xs text-muted-foreground">
-              Window: {windowSec}s · Sampling: {sr} Hz · Total sampel: {samples?.length ?? 0}
-            </p>
+    <div className="space-y-6">
+      <Card className="rounded-xl">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <ModelSelect value={model} onChange={setModel} disabled={isLoading} />
+          <div className="flex items-center gap-3">
+            <Button onClick={handleRun} disabled={!file || isLoading}>
+              {isLoading ? (
+                <span className="inline-flex items-center gap-2">
+                  <Spinner /> Menganalisis…
+                </span>
+              ) : (
+                "Diagnosis"
+              )}
+            </Button>
           </div>
         </div>
+
+        <div className="mt-5">
+          <EcgUploader onFileSelected={setFile} disabled={isLoading} />
+        </div>
+
+        {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
+      </Card>
+
+      {result && (
+        <DiagnosisSummary
+          total={result.total_segments}
+          counts={result.counts}
+          fileName={file?.name} // OK: optional prop
+          model={model.toUpperCase()} // pass "model", not "modelName"
+        />
       )}
-    </Card>
+    </div>
   );
 }

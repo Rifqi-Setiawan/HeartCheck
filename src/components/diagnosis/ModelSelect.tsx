@@ -1,85 +1,79 @@
 "use client";
 
 import * as React from "react";
-import { Cpu} from "lucide-react";
+import { ChevronDown } from "lucide-react";
 
-export type ModelId = "bert" | "conformer" | "transformer";
+export type ModelId = "bert" | "mae" | "conformer";
+
+const OPTIONS: Array<{ value: ModelId; label: string; hint: string }> = [
+  { value: "bert", label: "Bert", hint: "" },
+  { value: "conformer", label: "Conformer", hint: "" },
+  { value: "mae", label: "MAE", hint: "" },
+];
 
 type Props = {
   value: ModelId;
   onChange: (m: ModelId) => void;
-  className?: string;
   disabled?: boolean;
+  className?: string;
 };
 
-// Tipe aman untuk ikon lucide (React SVG component)
-type IconType = React.ComponentType<React.SVGProps<SVGSVGElement>>;
+export default function ModelSelect({ value, onChange, disabled, className = "" }: Props) {
+  const [open, setOpen] = React.useState(false);
+  const ref = React.useRef<HTMLDivElement>(null);
 
-const MODELS: { id: ModelId; label: string; subtitle: string; Icon: IconType }[] = [
-  { id: "bert",        label: "BERT",        subtitle: "ECG", Icon: Cpu },
-  { id: "conformer",   label: "Conformer",   subtitle: "ECG",  Icon: Cpu },
-  { id: "transformer", label: "MAE", subtitle: "ECG",  Icon: Cpu },
-];
+  // close kalau klik di luar
+  React.useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
 
-export default function ModelSelect({ value, onChange, className = "", disabled }: Props) {
+  const current = OPTIONS.find((o) => o.value === value);
+
   return (
-    <div className={["w-full", className].join(" ")}>
-      <label className="mb-2 block text-sm font-medium text-foreground/90">Model</label>
+    <div ref={ref} className={`relative ${className}`}>
+      <label className="block mb-1 text-sm text-muted-foreground">Model:</label>
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => setOpen((o) => !o)}
+        className={`flex w-64 items-center justify-between rounded-md border bg-white 
+                    px-3 py-2 text-sm font-medium shadow-sm transition
+                    ${disabled ? "opacity-50 cursor-not-allowed" : "hover:border-primary"}`}
+      >
+        <span>{current?.label}</span>
+        <ChevronDown className="h-4 w-4 text-muted-foreground" />
+      </button>
 
-      {/* Segmented control (desktop/tablet) */}
-      <div role="tablist" aria-label="Pilih model diagnosis" className="hidden md:grid grid-cols-3 gap-2">
-        {MODELS.map(({ id, label, subtitle, Icon }) => {
-          const active = id === value;
-          return (
-            <button
-              key={id}
-              role="tab"
-              aria-selected={active}
-              onClick={() => !disabled && onChange(id)}
-              disabled={disabled}
-              className={[
-                "group flex items-center justify-center gap-2 rounded-xl border px-4 py-2.5 transition",
-                "outline-none focus-visible:ring-2 focus-visible:ring-ring/60",
-                active
-                  ? "border-transparent bg-primary text-primary-foreground shadow-sm"
-                  : "border-border/60 bg-background hover:bg-muted",
-                disabled && "opacity-60 cursor-not-allowed",
-              ].join(" ")}
-            >
-              <Icon className={["h-4 w-4", active ? "opacity-90" : "text-primary"].join(" ")} />
-              <span className="text-sm font-semibold">{label}</span>
-              <span
-                className={[
-                  "rounded-md px-1.5 py-0.5 text-[11px]",
-                  active ? "bg-primary-foreground/15" : "bg-muted text-muted-foreground",
-                ].join(" ")}
-              >
-                {subtitle}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Mobile fallback */}
-      <div className="md:hidden">
-        <select
-          value={value}
-          onChange={(e) => onChange(e.target.value as ModelId)}
-          disabled={disabled}
-          className={[
-            "w-full rounded-xl border border-border/60 bg-background px-3 py-2.5 text-sm",
-            "shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/60",
-            disabled && "opacity-60 cursor-not-allowed",
-          ].join(" ")}
+      {open && (
+        <ul
+          className="absolute z-10 mt-1 w-64 overflow-hidden rounded-md border border-border/50 bg-white 
+                     shadow-lg animate-in fade-in slide-in-from-top-1"
         >
-          {MODELS.map(({ id, label, subtitle }) => (
-            <option key={id} value={id}>
-              {label} ({subtitle})
-            </option>
+          {OPTIONS.map((o) => (
+            <li key={o.value}>
+              <button
+                type="button"
+                onClick={() => {
+                  onChange(o.value);
+                  setOpen(false);
+                }}
+                className={`block w-full px-3 py-2 text-left text-sm transition 
+                           ${o.value === value ? "bg-primary/10 font-semibold text-primary" : "hover:bg-slate-50"}`}
+              >
+                {o.label}
+              </button>
+            </li>
           ))}
-        </select>
-      </div>
+        </ul>
+      )}
+
+      {current?.hint && (
+        <p className="mt-1 text-xs text-muted-foreground">{current.hint}</p>
+      )}
     </div>
   );
 }

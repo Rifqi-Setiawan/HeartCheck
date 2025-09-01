@@ -1,55 +1,50 @@
-"use client";
+// components/diagnosis/DiagnosisSummary.tsx
+import React from "react";
 
-import * as React from "react";
-import type { Summary, ClassLabel } from "@/lib/diagnosiSegments";
+interface DiagnosisSummaryProps {
+  counts: { L: number; N: number; Q: number; R: number; V: number };
+  total: number;
+  fileName?: string;              // ← make optional
+  model: string;                  // ← keep prop name "model"
+}
 
-type Props = {
-  title?: string;                // default: "Annotator: atr"
-  summary: Summary;
-  className?: string;
-};
+export default function DiagnosisSummary({
+  counts,
+  total,
+  fileName,
+  model,
+}: DiagnosisSummaryProps) {
+  const percent = (v: number) => (total > 0 ? ((v / total) * 100).toFixed(1) : "0.0");
+  const items = [
+    { key: "L", value: counts.L },
+    { key: "N", value: counts.N },
+    { key: "Q", value: counts.Q },
+    { key: "R", value: counts.R },
+    { key: "V", value: counts.V },
+  ];
 
-/** Urutan tampilan kelas: L N Q R V */
-const ORDER: ClassLabel[] = ["L", "N", "Q", "R", "V"];
-
-export default function DiagnosisSummary({ title = "Annotator: atr", summary, className = "" }: Props) {
   return (
-    <div className={["rounded-xl border border-border/60 bg-card p-5 shadow-sm", className].join(" ")}>
-      <div className="mb-3 flex items-baseline justify-between">
-        <h4 className="text-base font-semibold text-foreground">{title}</h4>
-        <span className="text-sm text-muted-foreground">
-          ({summary.totalSegments} annotations)
+    <div className="bg-blue-50 p-4 rounded-2xl shadow-sm">
+      <div className="flex justify-between mb-2">
+        <h2 className="font-semibold text-gray-800">Hasil Prediksi</h2>
+        <span className="text-sm text-gray-600">
+          File: {fileName ?? "—"} · Model: {model}
         </span>
       </div>
 
-      <ul className="divide-y divide-border/60">
-        {ORDER.map((k) => (
-          <li key={k} className="flex items-center justify-between py-2">
-            <div className="flex items-center gap-3">
-              <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-primary/10 text-primary text-xs font-semibold">
-                {k}
-              </span>
-              <span className="text-sm text-foreground">{labelName(k)}</span>
-            </div>
-            <div className="flex items-baseline gap-3">
-              <span className="tabular-nums text-sm font-semibold text-foreground">
-                {summary.counts[k]}
-              </span>
-              <span className="text-xs text-muted-foreground">{summary.percentages[k]}%</span>
-            </div>
-          </li>
+      <div className="grid grid-cols-5 gap-4">
+        {items.map(({ key, value }) => (
+          <div key={key} className="bg-white rounded-xl p-4 flex flex-col items-center shadow">
+            <span className="text-sm text-gray-500">{key}</span>
+            <span className="text-2xl font-bold text-blue-600">{value}</span>
+            <span className="text-sm text-gray-700 font-medium">{percent(value)}%</span>
+          </div>
         ))}
-      </ul>
+      </div>
+
+      <div className="mt-3 text-sm text-gray-700">
+        Total anotasi: <span className="font-semibold">{total}</span>
+      </div>
     </div>
   );
-}
-
-function labelName(k: ClassLabel): string {
-  switch (k) {
-    case "L": return "Left bundle branch";
-    case "N": return "Normal";
-    case "Q": return "Escaped/QRS variant";
-    case "R": return "Right bundle branch";
-    case "V": return "Ventricular ectopic";
-  }
 }
