@@ -34,7 +34,6 @@ export default function DiagnosisPanel() {
       const form = new FormData();
       form.append("model_id", model);
       form.append("file", file, file.name);
-      // opsional: form.append("sr", "250"); form.append("window_sec", "0.7");
 
       const data = await postDiagnoseECG(form);
       setResult(data);
@@ -75,8 +74,8 @@ export default function DiagnosisPanel() {
         <DiagnosisSummary
           total={result.total_segments}
           counts={result.counts}
-          fileName={file?.name} // OK: optional prop
-          model={model.toUpperCase()} // pass "model", not "modelName"
+          fileName={file?.name}
+          model={model.toUpperCase()} 
         />
       )}
     </div>

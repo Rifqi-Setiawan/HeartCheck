@@ -1,36 +1,41 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Heart Detection (Next.js + TypeScript)
 
-## Getting Started
+Web UI untuk **menganalisis sinyal ECG dari CSV** dan mengirimnya ke AI backend (BERT / Conformer / MAE). README ini jadi panduan cepat untuk cloning, setup, dan menjalankan proyek.
 
-First, run the development server:
+---
 
+## ✨ Fitur
+- Upload file **ECG .csv**
+- Pilih model **BERT / Conformer / MAE**
+- Loading & error state yang jelas
+- Ringkasan hasil (counts & labels per segmen)
+- Dibangun dengan **Next.js (App Router)** + **TypeScript**
+
+---
+
+## 🧱 Tech Stack
+- Next.js 14/15 (App Router)
+- React 18 + TypeScript
+- UI components di `src/components/ui`
+- Helper API di `src/lib/apis` (mis. `postdiagnoseECG`)
+- Terhubung ke **AI Backend** (FastAPI/Python atau sejenisnya)
+
+---
+
+## ✅ Prasyarat
+- **Node.js** 18 LTS atau 20 LTS (`node -v`)
+- Package manager: **pnpm** (disarankan) / yarn / npm
+- URL **AI Backend** yang aktif
+
+> Windows: pertimbangkan `nvm-windows` untuk ganti versi Node. Jika ada masalah path panjang: `git config --system core.longpaths true`.
+
+---
+
+## 🚀 Mulai Cepat
+
+### 1) Clone
 ```bash
+git clone
+pnpm install atau 
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
